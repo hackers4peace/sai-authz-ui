@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue';
 import { ISessionInfo, getDefaultSession, handleIncomingRedirect, login as oidcLogin} from "@inrupt/solid-client-authn-browser";
+import { useBackend } from '@/backend';
 
 class OidcError extends Error {
   constructor(private oidcInfo?: ISessionInfo) {
@@ -10,6 +11,9 @@ class OidcError extends Error {
 
 export const useCoreStore = defineStore('core', () => {
   const userId = ref<string | null>(null)
+  const isBackendLoggedIn = ref(false)
+  const redirectUrlForBackend = ref('')
+
 
   async function login(oidcIssuer: string) {
     const options = {
@@ -28,7 +32,10 @@ export const useCoreStore = defineStore('core', () => {
     userId.value = oidcInfo.webId
 
     // TODO check if backend authenticated
-
+    const backend = useBackend()
+    const checkBackendResult = await backend.checkServerSession()
+    isBackendLoggedIn.value = checkBackendResult.isLoggedIn
+    redirectUrlForBackend.value = checkBackendResult.redirectUrl ?? ''
   }
 
   async function restoreOidcSession(): Promise<void> {
@@ -43,6 +50,6 @@ export const useCoreStore = defineStore('core', () => {
     }
   }
 
-  return { userId, login, handleRedirect, restoreOidcSession}
+  return { userId, isBackendLoggedIn, redirectUrlForBackend, login, handleRedirect, restoreOidcSession}
 })
 

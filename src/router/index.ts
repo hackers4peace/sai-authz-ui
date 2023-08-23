@@ -48,7 +48,7 @@ router.beforeEach(async (to, from) => {
   await coreStore.restoreOidcSession()
 
   if (!to.meta.public) {
-    if (!coreStore.userId) {
+    if (!coreStore.userId || !coreStore.isBackendLoggedIn) {
       return {
         name: 'login',
         // query: { redirect: to.fullPath },
