@@ -1,11 +1,19 @@
+<style>
+  a {
+    text-decoration: none;
+  }
+  a:link    { color: black; }
+  a:visited { color: black; }
+</style>
 <template>
-  <v-app>
-    <v-main>
-      <HelloWorld />
-    </v-main>
-  </v-app>
+  <Suspense>
+    <router-view />
+    <template #fallback>
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </template>
+  </Suspense>
 </template>
 
-<script setup lang="ts">
-  import HelloWorld from '@/components/HelloWorld.vue'
+<script lang="ts" setup>
+  //
 </script>
