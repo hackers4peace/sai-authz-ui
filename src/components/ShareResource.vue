@@ -171,5 +171,6 @@ watch(
   () => appStore.shareAuthorizationConfirmation,
   confirmation => {
     if (confirmation) window.location.href = confirmation.callbackEndpoint
-  })
+  }
+)
 </script>

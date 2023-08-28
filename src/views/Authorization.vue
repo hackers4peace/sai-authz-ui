@@ -1,8 +1,8 @@
 <template>
   <AuthorizeApp
-    v-if="!route.query.resource && appStore.authorization && appStore.application"
+    v-if="!route.query.resource && appStore.authorizationData && appStore.application"
     :application="appStore.application"
-    :authorization="appStore.authorization"
+    :authorizationData="appStore.authorizationData"
     ></AuthorizeApp>
   <AuthorizeAgent
     v-if="!route.query.resource && agent"
