@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue';
 import { ISessionInfo, getDefaultSession, handleIncomingRedirect, login as oidcLogin} from "@inrupt/solid-client-authn-browser";
 import { useBackend } from '@/backend';
+import type { RouteLocationNormalized } from 'vue-router';
 
 class OidcError extends Error {
   constructor(private oidcInfo?: ISessionInfo) {
@@ -38,10 +39,11 @@ export const useCoreStore = defineStore('core', () => {
     redirectUrlForBackend.value = checkBackendResult.redirectUrl ?? ''
   }
 
-  async function restoreOidcSession(): Promise<void> {
+  async function restoreOidcSession(to: RouteLocationNormalized): Promise<void> {
     const oidcSession = getDefaultSession();
 
     if (!oidcSession.info.isLoggedIn) {
+      if (to.name !== 'login') localStorage.setItem('restoreUrl', to.fullPath)
       // if session can be restored it will redirect to oidcIssuer, which will return back to `/redirect`
       const oidcInfo = await oidcSession.handleIncomingRedirect({ restorePreviousSession: true });
       if (oidcInfo?.webId) {

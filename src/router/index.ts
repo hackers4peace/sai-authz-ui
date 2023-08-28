@@ -11,19 +11,19 @@ const routes = [
       {
         path: '',
         name: 'dashboard',
-        component: () => import(/* webpackChunkName: "dashboard" */ '@/views/Home.vue'),
+        component: () => import(/* webpackChunkName: "dashboard" */ '@/views/Dashboard.vue'),
         children: [
-          // {
-          //   path: '/authorization',
-          //   name: 'authorization',
-          //   component: () => import(/* webpackChunkName: "authorization" */ '@/views/Authorization.vue'),
-          // }
+          {
+            path: '/authorize',
+            name: 'authorization',
+            component: () => import(/* webpackChunkName: "authorization" */ '@/views/Authorization.vue'),
+          }
         ]
       },
       {
         path: '/login',
         name: 'login',
-        component: () => import(/* webpackChunkName: "authn" */ '@/views/Authn.vue'),
+        component: () => import(/* webpackChunkName: "authn" */ '@/views/Authentication.vue'),
         meta: { public: true }
       },
       {
@@ -44,14 +44,14 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from) => {
+  if (to.name === 'redirect') return
   const coreStore = useCoreStore()
-  await coreStore.restoreOidcSession()
+  await coreStore.restoreOidcSession(to)
 
   if (!to.meta.public) {
     if (!coreStore.userId || !coreStore.isBackendLoggedIn) {
       return {
         name: 'login',
-        // query: { redirect: to.fullPath },
       }
     }
   }
@@ -60,8 +60,9 @@ router.beforeEach(async (to, from) => {
 async function handleRedirect() {
   const coreStore = useCoreStore()
   await coreStore.handleRedirect(window.location.href)
-
-  return { name: 'dashboard' }
+  const restoreUrl = localStorage.getItem('restoreUrl')
+  localStorage.removeItem('restoreUrl')
+  return restoreUrl ? restoreUrl : { name: 'dashboard' }
 }
 
 export default router

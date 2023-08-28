@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@inrupt/solid-client-authn-browser": "^1.17.1",
+    "@janeirodigital/sai-api-messages": "^1.0.0-rc.21",
     "@mdi/font": "7.0.96",
     "pinia": "^2.0.23",
     "roboto-fontface": "*",
