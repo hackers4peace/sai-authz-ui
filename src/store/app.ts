@@ -1,8 +1,8 @@
 // Utilities
 import { useBackend } from '@/backend'
-import { Resource, AuthorizationData, SocialAgent, Application, ShareAuthorization, ShareAuthorizationConfirmation, Authorization, AccessAuthorization } from '@janeirodigital/sai-api-messages'
+import { Resource, AuthorizationData, SocialAgent, Application, ShareAuthorization, ShareAuthorizationConfirmation, Authorization, AccessAuthorization, DataInstance } from '@janeirodigital/sai-api-messages'
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { reactive, ref } from 'vue'
 
 
 export const useAppStore = defineStore('app', () => {
@@ -13,6 +13,7 @@ export const useAppStore = defineStore('app', () => {
   const accessAuthorization= ref<AccessAuthorization | null>(null)
   const socialAgents = ref<SocialAgent[]>([])
   const application = ref<Partial<Application> | null>(null)
+  const loadedDataInstances = reactive<DataInstance[]>([])
 
   const backend = useBackend()
 
@@ -26,6 +27,13 @@ export const useAppStore = defineStore('app', () => {
 
   async function getAuthoriaztion (clientId: string) {
     authorizationData.value = await backend.getAuthorization(clientId, lang.value)
+  }
+
+  // TODO change to computed in component
+  async function listDataInstances (registrationId: string) {
+    const dataInstances = await backend.listDataInstances(registrationId)
+    loadedDataInstances.push(...dataInstances)
+    return dataInstances
   }
 
   async function authorizeApp (authorization: Authorization) {
@@ -45,12 +53,14 @@ export const useAppStore = defineStore('app', () => {
     resource,
     authorizationData,
     accessAuthorization,
+    loadedDataInstances,
     socialAgents,
     application,
     shareAuthorizationConfirmation,
     getResource,
     shareResource,
     getAuthoriaztion,
+    listDataInstances,
     authorizeApp,
     getSocialAgents,
     getApplication

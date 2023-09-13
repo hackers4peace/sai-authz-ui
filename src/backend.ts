@@ -1,5 +1,5 @@
 import { getDefaultSession } from "@inrupt/solid-client-authn-browser";
-import { AccessAuthorization, Application, ApplicationAuthorizationRequest, ApplicationAuthorizationResponse, ApplicationAuthorizationResponseMessage, Authorization, AuthorizationData, DescriptionsRequest, DescriptionsResponse, DescriptionsResponseMessage, IRI, Request, Resource, ResourceRequest, ResourceResponse, ResponseMessage, ShareAuthorization, ShareAuthorizationConfirmation, ShareAuthorizationRequest, ShareAuthorizationResponse, ShareAuthorizationResponseMessage, SocialAgent, SocialAgentsRequest, SocialAgentsResponse, SocialAgentsResponseMessage, UnregisteredApplicationProfileRequest, UnregisteredApplicationProfileResponse } from "@janeirodigital/sai-api-messages";
+import { AccessAuthorization, Application, ApplicationAuthorizationRequest, ApplicationAuthorizationResponse, ApplicationAuthorizationResponseMessage, Authorization, AuthorizationData, DataInstance, DescriptionsRequest, DescriptionsResponse, DescriptionsResponseMessage, IRI, ListDataInstancesRequest, ListDataInstancesResponse, ListDataInstancesResponseMessage, Request, Resource, ResourceRequest, ResourceResponse, ResponseMessage, ShareAuthorization, ShareAuthorizationConfirmation, ShareAuthorizationRequest, ShareAuthorizationResponse, ShareAuthorizationResponseMessage, SocialAgent, SocialAgentsRequest, SocialAgentsResponse, SocialAgentsResponseMessage, UnregisteredApplicationProfileRequest, UnregisteredApplicationProfileResponse } from "@janeirodigital/sai-api-messages";
 
 const backendBaseUrl = import.meta.env.VITE_BACKEND_BASE_URL
 const authnFetch = getDefaultSession().fetch;
@@ -11,6 +11,7 @@ export function useBackend() {
     getResource,
     shareResource,
     getAuthorization,
+    listDataInstances,
     authorizeApp,
     getSocialAgents,
     getApplication
@@ -59,6 +60,13 @@ async function getAuthorization(clientId: IRI, lang: string): Promise<Authorizat
   const request = new DescriptionsRequest(clientId, lang)
   const data = await getDataFromApi<DescriptionsResponseMessage>(request)
   const response = new DescriptionsResponse(data)
+  return response.payload
+}
+
+async function listDataInstances(registrationId: IRI): Promise<DataInstance[]> {
+  const request = new ListDataInstancesRequest(registrationId)
+  const data = await getDataFromApi<ListDataInstancesResponseMessage>(request)
+  const response = new ListDataInstancesResponse(data)
   return response.payload
 }
 

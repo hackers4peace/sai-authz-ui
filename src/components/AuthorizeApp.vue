@@ -70,7 +70,7 @@ span.label {
           <v-chip
             color="agent"
             label
-          >{{ agentsSharingWithMe.length }}</v-chip>
+          >{{ props.authorizationData.dataOwners.length }}</v-chip>
           <template v-slot:actions>
             <v-badge
               color="agent"
@@ -100,7 +100,7 @@ span.label {
           </v-btn-toggle>
           <v-expansion-panels variant="popout">
             <v-expansion-panel
-              v-for="agent in agentsSharingWithMe"
+              v-for="agent in props.authorizationData.dataOwners"
               :disabled="topLevelScope !== 'some'"
             >
             <v-expansion-panel-title class="d-flex flex-row">
@@ -115,7 +115,7 @@ span.label {
               <v-chip
                 color="primary"
                 label
-              >{{ agent.registrations.length }}</v-chip>
+              >{{ agent.dataRegistrations.length }}</v-chip>
               <template v-slot:actions>
                 <v-badge
                   color="primary"
@@ -146,7 +146,7 @@ span.label {
               </v-btn-toggle>
               <v-expansion-panels variant="popout">
                 <v-expansion-panel
-                  v-for="registration in agent.registrations"
+                  v-for="registration in agent.dataRegistrations"
                   :disabled="agentsIndex[agent.id].scope !== 'some'"
                 >
                 <v-expansion-panel-title class="d-flex flex-row">
@@ -243,7 +243,7 @@ span.label {
 </template>
 
 <script lang="ts" setup>
-import { AccessModes, AccessNeed, Application, Authorization, AuthorizationData, BaseAuthorization, DataAuthorization } from '@janeirodigital/sai-api-messages';
+import { AccessModes, AccessNeed, Application, Authorization, AuthorizationData, BaseAuthorization, DataAuthorization, DataInstance } from '@janeirodigital/sai-api-messages';
 import { reactive, ref, watch } from 'vue';
 import { useCoreStore } from '@/store/core'
 import { useAppStore } from '@/store/app'
@@ -251,108 +251,12 @@ import { useAppStore } from '@/store/app'
 const coreStore = useCoreStore()
 const appStore = useAppStore()
 
-const agentsSharingWithMe = [
-  {
-    id: 'http://localhost:3000/alice/profile/card#me',
-    label: 'Alice',
-    registrations: [
-      {
-        id: 'https://home.alice.example',
-        label: 'Home',
-        count: 1,
-        dataInstances: [
-          {
-            id: 'https://home.alice.example/project-b',
-            label: 'Project X'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'https://acme.example',
-    label: 'ACME',
-    registrations: [
-      {
-        id: 'https://rnd.acme.example',
-        label: 'RnD',
-        count: 2,
-        dataInstances: [
-          {
-            id: 'https://rnd.acme.example/project-1',
-            label: 'Project 1'
-          },
-          {
-            id: 'https://rnd.acme.example/project-2',
-            label: 'Project 2'
-          }
-        ]
-      },
-      {
-        id: 'https://hr.acme.example',
-        label: 'Human Resources',
-        count:  2,
-        dataInstances: [
-          {
-            id: 'https://hr.acme.example/project-a',
-            label: 'Project A'
-          },
-          {
-            id: 'https://hr.acme.example/project-b',
-            label: 'Project B'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'https://bob.example',
-    label: 'Bob',
-    registrations: [
-      {
-        id: 'https://work.bob.example',
-        label: 'Work',
-        count: 1,
-        dataInstances: [
-          {
-            id: 'https://work.bob.example/project-b',
-            label: 'Project X'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'https://kim.example',
-    label: 'Kim',
-    registrations: [
-      {
-        id: 'https://home.kim.example',
-        label: 'Home',
-        count: 1,
-        dataInstances: [
-          {
-            id: 'https://home.kim.example/project-b',
-            label: 'Project Z'
-          }
-        ]
-      }
-    ]
-  }
-]
+const props = defineProps<{
+  application: Partial<Application>
+  authorizationData: AuthorizationData
+}>()
 
-const loadedDataInstances: Record<string, {id: string, label: string}[]> = {}
-
-// TODO: remove once data comes from API
-async function fetchDataInstances(registrationId: string): Promise<{ id: string, label: string }[]> {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  for (const agent of agentsSharingWithMe) {
-    for (const registration of agent.registrations) {
-      if (registration.id === registrationId) return registration.dataInstances
-    }
-  }
-  return []
-}
+const loadedDataInstances: Record<string, DataInstance[]> = {}
 
 type PropagatingScope =  'none' | 'all'
 type Scope = PropagatingScope | 'some'
@@ -363,7 +267,7 @@ interface Agent {
 }
 
 // TODO: add proper type from sai-api-messages
-function buildAgentsIndex(data: typeof agentsSharingWithMe): Record<string, Agent> {
+function buildAgentsIndex(data: typeof props.authorizationData.dataOwners): Record<string, Agent> {
   const index: Record<string, Agent> = {}
   for (const agent of data) {
     index[agent.id] = {
@@ -374,7 +278,7 @@ function buildAgentsIndex(data: typeof agentsSharingWithMe): Record<string, Agen
   return index
 }
 
-const agentsIndex = reactive<Record<string, Agent>>(buildAgentsIndex(agentsSharingWithMe))
+const agentsIndex = reactive<Record<string, Agent>>(buildAgentsIndex(props.authorizationData.dataOwners))
 
 interface Registration {
   id: string
@@ -384,10 +288,10 @@ interface Registration {
 }
 
 // TODO: add proper type from sai-api-messages
-function buildRegistrationsIndex(data: typeof agentsSharingWithMe): Record<string, Registration> {
+function buildRegistrationsIndex(data: typeof props.authorizationData.dataOwners): Record<string, Registration> {
   const index: Record<string, Registration> = {}
   for (const agent of data) {
-    for (const registration of agent.registrations) {
+    for (const registration of agent.dataRegistrations) {
       index[registration.id] = {
         id: registration.id,
         agent: agent.id,
@@ -399,22 +303,22 @@ function buildRegistrationsIndex(data: typeof agentsSharingWithMe): Record<strin
   return index
 }
 
-const registrationsIndex = reactive<Record<string, Registration>>(buildRegistrationsIndex(agentsSharingWithMe))
+const registrationsIndex = reactive<Record<string, Registration>>(buildRegistrationsIndex(props.authorizationData.dataOwners))
 
-interface DataInstance {
+interface SelectableDataInstance {
   id: string
   registration: string
   agent: string
   selected:boolean
 }
 
-const dataInstancesIndex = reactive<Record<string, DataInstance>>({})
+const dataInstancesIndex = reactive<Record<string, SelectableDataInstance>>({})
 
 // TODO: add proper type from sai-api-messages
 function addDataInstancesToIndex(
   agentId: string,
   registrationId: string,
-  dataInstances: { id: string, label: string }[],
+  dataInstances: DataInstance[],
   selected: boolean
   ): void {
       for (const dataInstance of dataInstances) {
@@ -430,7 +334,7 @@ function addDataInstancesToIndex(
 function findAgentRegistrations(agentId: string): Registration[] {
   return Object.values(registrationsIndex).filter(registration => registration.agent === agentId)
 }
-function findRegistrationDataInstances(registrationId: string): DataInstance[] {
+function findRegistrationDataInstances(registrationId: string): SelectableDataInstance[] {
   return Object.values(dataInstancesIndex).filter(dataInstance => dataInstance.registration === registrationId)
 }
 
@@ -478,7 +382,7 @@ function registrationScopeChanged(agentId: string, registrationId: string, scope
 }
 
 async function loadDataInstances(agentId: string, registrationId:string, selected:boolean): Promise<void> {
-  const dataInstances = await fetchDataInstances(registrationId)
+  const dataInstances = await appStore.listDataInstances(registrationId)
   loadedDataInstances[registrationId] = dataInstances
   addDataInstancesToIndex(agentId, registrationId, dataInstances, selected)
 }
@@ -532,19 +436,14 @@ function statsForRegistration(registrationId: string): number {
   if (registration.scope === 'none') {
     return 0
   } else {
-    const dataInstances = findRegistrationDataInstances(registration.id)
     if (registration.scope === 'all') {
-      return dataInstances.length
+      return registration.count
     } else {
+      const dataInstances = findRegistrationDataInstances(registration.id)
       return dataInstances.filter(dataInstance => dataInstance.selected).length
     }
   }
 }
-
-const props = defineProps<{
-  application: Partial<Application>
-  authorizationData: AuthorizationData
-}>()
 
 // TODO add stepper to support multiple top level access needs
 const accessNeed = props.authorizationData.accessNeedGroup.needs[0]
