@@ -243,7 +243,7 @@ span.label {
 </template>
 
 <script lang="ts" setup>
-import { AccessModes, AccessNeed, Application, Authorization, AuthorizationData, BaseAuthorization, DataAuthorization, DataInstance } from '@janeirodigital/sai-api-messages';
+import { Scopes, AccessModes, AccessNeed, Application, Authorization, AuthorizationData, BaseAuthorization, DataAuthorization, DataInstance } from '@janeirodigital/sai-api-messages';
 import { reactive, ref, watch } from 'vue';
 import { useCoreStore } from '@/store/core'
 import { useAppStore } from '@/store/app'
@@ -493,28 +493,70 @@ function chooseIcon(access: string[]): string {
   }
 }
 
-function getScope(accessNeed: AccessNeed): string {
-  if (accessNeed.parent) return 'Inherited'
-  // TODO based on user input
-  return 'All'
-}
 
-// TODO use case when there is a `parent` access need
+// TODO throw error if required need is not satisfied
 function createDataAuthorizations(accessNeed: AccessNeed, parent?: AccessNeed): DataAuthorization[] {
   if (!parent && !isSelected(accessNeed.id)) return []
   if (parent && !isSelected(parent.id, accessNeed.id)) return []
-  const dataAuthorization = {
-    accessNeed: accessNeed.id,
-    scope: getScope(accessNeed),
-  } as DataAuthorization
+  const dataAuthorizations: DataAuthorization[] = []
+  const accessNeedAuthorization = {
+    accessNeed: accessNeed.id
+  } as Partial<DataAuthorization>
+  if (accessNeed.parent) {
+    dataAuthorizations.push({
+      ...accessNeedAuthorization,
+      scope: Scopes.Inherited
+    } as DataAuthorization)
+  } else if (topLevelScope.value === 'all') {
+    dataAuthorizations.push({
+      ...accessNeedAuthorization,
+      scope: Scopes.All
+    } as DataAuthorization)
+  } else if (topLevelScope.value === 'some') {
+    for (const agent of Object.values(agentsIndex)) {
+      const agentAuthorization = {
+        ...accessNeedAuthorization,
+        dataOwner: agent.id
+      }
+      if (agent.scope === 'all') {
+        dataAuthorizations.push({
+          ...agentAuthorization,
+          scope: Scopes.AllFromAgent,
+        } as DataAuthorization)
+      } else if (agent.scope === 'some') {
+        for (const registration of findAgentRegistrations(agent.id)) {
+          const registrationAuthorization = {
+            ...agentAuthorization,
+            dataRegistration: registration.id,
+          } as Partial<DataAuthorization>
+          if (registration.scope === 'all') {
+            dataAuthorizations.push({
+              ...registrationAuthorization,
+              scope: Scopes.AllFromRegistry,
+            } as DataAuthorization)
+          } else if (registration.scope === 'some') {
+            dataAuthorizations.push({
+              ...registrationAuthorization,
+              scope: Scopes.SelectedFromRegistry,
+              dataInstances: findRegistrationDataInstances(registration.id).filter(i => i.selected).map(i => i.id)
+            } as DataAuthorization)
+          }
+        }
+      }
+    }
+  }
   let children: DataAuthorization[] = []
   if (accessNeed.children) {
     children = accessNeed.children.flatMap(childAccessNeed => createDataAuthorizations(childAccessNeed, accessNeed))
   }
-  return [ dataAuthorization, ...children]
+  return [ ...dataAuthorizations, ...children]
 }
 
 function authorize(granted = true) {
+  // UI also disables the authorize button
+  if (granted && topLevelScope.value === 'none') {
+    throw new Error('Use granted = false if no data is being shared')
+  }
   loadingAuthorize.value = granted
   loadingDeny.value = !granted
   if (props.authorizationData) {
@@ -534,6 +576,9 @@ function authorize(granted = true) {
         ...baseAuthorization,
         granted: false,
       }
+    }
+    if (granted && !authorization.dataAuthorizations?.length) {
+      throw new Error('Use granted = false if no data is being shared')
     }
     appStore.authorizeApp(authorization)
   }
